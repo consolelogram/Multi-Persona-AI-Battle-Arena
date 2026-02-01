@@ -5,20 +5,32 @@ import re
 import numpy as np
 from difflib import SequenceMatcher
 from sentence_transformers import SentenceTransformer
-from groq import Groq
+from groq import Groq   
 from start import select_topic  # Importing your menu
+import os
+from difflib import SequenceMatcher
+from sentence_transformers import SentenceTransformer
+from groq import Groq
+from dotenv import load_dotenv # <--- FIXED THIS LINE
 
-# ==========================================
-#              1. SETUP & INIT
-# ==========================================
+# 1. Load the variables from the .env file
+load_dotenv() 
 
-# PASTE YOUR KEY BELOW
-API_KEY = "API KEY HERE"
-client = Groq(api_key=API_KEY)
+# 2. Initialize the client securely
+# If this fails, it means your .env file isn't set up right!
+api_key = os.getenv("GROQ_API_KEY")
+if not api_key:
+    raise ValueError("API Key not found! Check your .env file.")
+
+client = Groq(api_key=api_key)
+
+# 3. Model Setup
 MODEL_ID = "llama-3.3-70b-versatile"
 
 print("Loading Embedding Model...")
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# ... rest of your code ...
 
 try:
     r = redis.Redis(host="127.0.0.1", port=6379, decode_responses=False)
@@ -115,26 +127,40 @@ def generate_opening_statement(topic, house_stance, user_stance):
         return f"House is silent (API Error: {e})"
 
 def generate_debate_reply(user_input, topic, house_stance, anchor):
+    import random
     print(f"   -> House is formulating an argument...")
     
+    # 1. LIST OF ATTACK VECTORS
+    # This forces him to change his strategy every turn.
+    strategies = [
+        "Identify a 'Strawman' fallacy (claiming the user distorted your view).",
+        "Attack the user's 'Tone' (call them naive, soft, or sentimental).",
+        "Use a 'Reductio ad absurdum' (take their logic to a ridiculous extreme).",
+        "Claim the user is suffering from 'Confirmation Bias'.",
+        "Attack the definition of words (e.g. define what 'harm' actually means).",
+        "Use a harsh medical metaphor (triage, amputation, infection)."
+    ]
+    
+    # Pick one at random
+    current_strategy = random.choice(strategies)
+
     prompt = f"""
     [ROLE]
     YOU are Dr. Gregory House.
-    THE USER is a Patient with a flawed worldview.
+    The USER is a naive patient.
 
     [SCENARIO]
     Topic: "{topic}"
     User's Argument: "{user_input}"
-    YOUR Stance: "{house_stance}" (Defend this).
-    Your Philosophy: "{anchor}"
+    Your Stance: "{house_stance}"
 
-    [CRITICAL RULES]
-    1. ATTACK THE ARGUMENT, NOT THE PERSON.
-    2. Do not use ad hominem attacks (e.g. "You are stupid").
-    3. Instead, call the *idea* naive, dangerous, or a placebo.
-    4. Identify the logical fallacy in the user's input.
-    5. Keep it under 3 sentences.
-    6. Tone: Clinical, cold, intellectually superior.
+    [CURRENT OBJECTIVE]
+    **You must use this specific strategy:** {current_strategy}
+
+    [CONSTRAINTS]
+    1. Do NOT use the phrase "False Dichotomy" (You use it too much).
+    2. Be short, rude, and logically superior.
+    3. Max 3 sentences.
     """
     
     try:
@@ -144,7 +170,8 @@ def generate_debate_reply(user_input, topic, house_stance, anchor):
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": user_input}
             ],
-            temperature=0.6 # Lower temp keeps him focused on the argument
+            temperature=0.7, # Slightly higher temp for more variety
+            max_tokens=100
         )
         return completion.choices[0].message.content.strip()
     except Exception as e:
@@ -226,15 +253,23 @@ while USER_HP > 0 and GHOST_HP > 0:
     LAST_GHOST_LINE = generate_debate_reply(user_query, topic, house_stance, anchor)
     print(f"\n HOUSE [{GHOST_HP} HP]: {LAST_GHOST_LINE}\n")
 
-    # E. HOUSE COUNTER-ATTACK
+# E. HOUSE COUNTER-ATTACK
     enemy_dmg, _ = judge_debate(LAST_GHOST_LINE, user_query)
     
     if enemy_dmg > 20:
-        ai_hit = int(enemy_dmg * 0.40)
-        ai_heal = int(ai_hit * 0.3) 
-        print(f"⚡ COUNTER! House hits -{ai_hit} HP! He heals +{ai_heal} HP.")
+        # RNG: Multiplier fluctuates between 0.25 (Weak) and 0.35 (Strong)
+        # If Judge gives 80 pts: Damage is between 20 and 28.
+        import random
+        variance = random.uniform(0.25, 0.35)
+        
+        ai_hit = int(enemy_dmg * variance)
+        
+        # HEAL: He heals 20% of the damage he dealt (approx +4 to +6 HP)
+        ai_heal = int(ai_hit * 0.20) 
+        
+        print(f" COUNTER! House hits -{ai_hit} HP! He heals +{ai_heal} HP.")
         USER_HP -= ai_hit
-        GHOST_HP = min(100, GHOST_HP + ai_heal)
+        GHOST_HP = min(350, GHOST_HP + ai_heal) # Max 350
     
     if USER_HP <= 0:
         print("\n GAME OVER.")
