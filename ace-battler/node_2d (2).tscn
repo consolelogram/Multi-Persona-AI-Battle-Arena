@@ -1,0 +1,41 @@
+[gd_scene load_steps=4 format=3 uid="uid://dx07s4htt1bbf"]
+
+[ext_resource type="Script" uid="uid://bqmycbrn0xg4j" path="res://opps.gd" id="1_np43u"]
+[ext_resource type="Texture2D" uid="uid://dx0lc8xwbnuva" path="res://72moj6yyses41.jpg" id="2_np43u"]
+[ext_resource type="Texture2D" uid="uid://d4aproqgersci" path="res://223-2239149_phoenix-wright-png.png" id="3_wwpvg"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_np43u")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="TextureRect" type="TextureRect" parent="CanvasLayer"]
+z_index = -4096
+z_as_relative = false
+offset_right = 1152.0
+offset_bottom = 648.0
+texture = ExtResource("2_np43u")
+
+[node name="TextureRect" type="TextureRect" parent="."]
+offset_top = 392.0
+offset_right = 1152.0
+offset_bottom = 649.0
+texture = ExtResource("3_wwpvg")
+
+[node name="RichTextLabel" type="RichTextLabel" parent="TextureRect"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 73.0
+offset_right = 1160.0
+offset_bottom = 257.0
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+
+[node name="Label" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 40.0
+offset_right = 144.0
+offset_bottom = 128.0
+theme_override_font_sizes/font_size = 60
+text = "100"
